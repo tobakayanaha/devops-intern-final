@@ -24,10 +24,10 @@ Expected output:
 
 Hello, DevOps!
 
-## Linux and Scripting Basics
+## 2 Linux and Scripting Basics
 A shell script was created inside the scripts/ directory to display basic system information.
 
-## Script
+### Script
 
 scripts/sysinfo.sh
 
@@ -36,14 +36,14 @@ The script uses the following Linux commands:
 - date - dislays the current date and time.
 - df -h - displays disk usage in a human readable format. 
 
-## Make the script executable
+### Make the script executable
 chmod -x scripts/sysinfo.sh
 
-## Run the script
+### Run the script
 From the project root:
 ./scripts/sysinfo.sh
 
-## Expected output
+### Expected output
 The script displays:
 
 Current user:
@@ -55,9 +55,35 @@ Current date:
 Disk usage: 
 <disk usage infomation>
 
-## Test Evidence 
+### Test Evidence 
 
 The script was tested locally and in WSL and executed successfully.
+
+## 3 Docker Basics
+The 'hello.py' Python application was containerized using Docker
+
+### Dockerfile
+The Dockerfile used Python 3.12 Slim as the base image, copies 'hello.py' into the container and runs the application when the container starts.
+
+### Build the Docker image
+From the project root:
+
+```bash
+docker build -t devopshello .
+```
+
+### Run Container
+ 
+ ```bash
+ docker run devopshello
+```
+### Expected output
+
+Hello. Devops!
+
+### Test Evidence
+
+The Docker image was successfully build and the container was tested locally.
 
 
 
