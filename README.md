@@ -1,5 +1,7 @@
 # devops-intern-final
 
+[![CI](https://github.com/tobakayanaha/devops-intern-final/actions/workflows/ci.yml/badge.svg)](https://github.com/tobakayanaha/devops-intern-final/actions/workflows/ci.yml)
+
 ## DevOps internship final assessment demonstrating Git, Linux, Docker, CI/CD, Nomad, and Grafana Loki.
 
 ## Author
