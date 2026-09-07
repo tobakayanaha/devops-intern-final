@@ -3,7 +3,7 @@
 **Name:** Bahlakoana
 **Submission date:** 2026-09-02
 
-[![CI](https://github.com/tonosa/devops-intern-final/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tonosa/devops-intern-final/actions/workflows/ci.yml)
+[![CI](https://github.com/tobakayanaha/devops-intern-final/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tobakayanaha/devops-intern-final/actions/workflows/ci.yml)
 
 ## Architecture Overview
 
@@ -41,15 +41,15 @@ to Loki and queried via Grafana.
 | Tool       | Version used in this project |
 |------------|-------------------------------|
 | Docker     | 29.7.0 (build c1eba93)        |
-| Nomad      | _fill in once installed_      |
-| Consul     | _fill in once installed_      |
+| Nomad      | v2.0.5     |
+| Consul     | v2.0.3     |
 | ShellCheck | 0.9.0                         |
 | Git        | 2.43.0                        |
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/tonosa/devops-intern-final.git
+git clone https://github.com/tobakayanaha/devops-intern-final.git
 cd devops-intern-final
 docker build --build-arg BUILD_SHA=$(git rev-parse --short HEAD) -t nginx-app:local app/
 docker run -d --name nginx-app -p 8080:8080 nginx-app:local
@@ -64,7 +64,7 @@ docker rm -f nginx-app
 
 ## Task 1 — Source Control
 
-- Repository: [`devops-intern-final`](https://github.com/tonosa/devops-intern-final) (public)
+- Repository: [`devops-intern-final`](https://github.com/tobakayanaha/devops-intern-final) (public)
 - Work was done on `feature/*` branches, merged to `main` via pull requests
   opened and self-reviewed by the author (inline review comments left on
   `app/nginx.conf` and `app/Dockerfile` before merging).
