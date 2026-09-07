@@ -3,7 +3,7 @@
 **Name:** Bahlakoana
 **Submission date:** 2026-09-02
 
-[![CI](https://github.com/tonosa/devops-intern-final/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tonosa/devops-intern-final/actions/workflows/ci.yml)
+[![CI](https://github.com/tobakayanaha/devops-intern-final/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tobakayanaha/devops-intern-final/actions/workflows/ci.yml)
 
 ## Architecture Overview
 
@@ -41,8 +41,8 @@ to Loki and queried via Grafana.
 | Tool       | Version used in this project |
 |------------|-------------------------------|
 | Docker     | 29.7.0 (build c1eba93)        |
-| Nomad      | to be filled     |
-| Consul     | to be filled    |
+| Nomad      | v2.0.5     |
+| Consul     | v2.0.3     |
 | ShellCheck | 0.9.0                         |
 | Git        | 2.43.0                        |
 
@@ -64,7 +64,7 @@ docker rm -f nginx-app
 
 ## Task 1 — Source Control
 
-- Repository: [`devops-intern-final`](https://github.com/tonosa/devops-intern-final) (public)
+- Repository: [`devops-intern-final`](https://github.com/tobakayanaha/devops-intern-final) (public)
 - Work was done on `feature/*` branches, merged to `main` via pull requests
   opened and self-reviewed by the author (inline review comments left on
   `app/nginx.conf` and `app/Dockerfile` before merging).
@@ -219,7 +219,92 @@ Workflow: `.github/workflows/ci.yml`, triggered on push and PR to `main`.
 
 ## Task 5 — Orchestration with Nomad
 
-_To be completed._
+`nomad/nginx-app.nomad.hcl` deploys the image published by CI in Task 4.
+
+- `type = "service"`, one group, one task, `docker` driver
+- Image tag is parameterised via an HCL `variable "image_tag"` (defaults to `latest`)
+- Resources: 100 MHz CPU, 64 MB memory (per the brief's spec)
+- Dynamic port named `http`, mapped to container port 8080
+- Consul service registration with an HTTP health check against `/healthz`
+  (`interval = "10s"`, `timeout = "2s"`)
+- Rolling `update` stanza: `max_parallel = 1`, `min_healthy_time = "10s"`,
+  `healthy_deadline = "2m"`, `auto_revert = true`
+- `restart` and `reschedule` policies included
+
+### `nomad job validate`
+
+```
+$ nomad job validate nomad/nginx-app.nomad.hcl
+Job validation successful
+```
+
+(An earlier version omitted `shutdown_delay`, which produced a validation
+warning — see Troubleshooting.)
+
+### `nomad job plan`
+
+```
+$ nomad job plan nomad/nginx-app.nomad.hcl
++ Job: "nginx-app"
++ Task Group: "nginx-app" (1 create)
+  + Task: "nginx-app" (forces create)
+Scheduler dry-run:
+- All tasks successfully allocated.
+Job Modify Index: 0
+```
+
+### `nomad job run`
+
+```
+$ nomad job run nomad/nginx-app.nomad.hcl
+==> Monitoring deployment "8c89ec4e"
+  ✓ Deployment "8c89ec4e" successful
+    Status      = successful
+    Description = Deployment completed successfully
+    Task Group  Auto Revert  Desired  Placed  Healthy  Unhealthy
+    nginx-app   true         1        1       1        0
+```
+
+### `nomad job status` — healthy allocation
+
+```
+$ nomad job status nginx-app
+Status        = running
+Latest Deployment
+  Status      = successful
+  Description = Deployment completed successfully
+  Task Group  Auto Revert  Desired  Placed  Healthy  Unhealthy
+  nginx-app   true         1        1       1        0
+Allocations
+ID        Node ID   Task Group  Version  Desired  Status   Created  Modified
+391e3e75  b32d7210  nginx-app   0        run      running  43s ago  24s ago
+```
+
+### Consul health check — passing
+
+```
+$ curl -s http://localhost:8500/v1/health/checks/nginx-app | python3 -m json.tool
+[
+    {
+        "Status": "passing",
+        "Output": "HTTP GET http://172.30.192.163:29000/healthz: 200 OK Output: OK\n",
+        "ServiceName": "nginx-app",
+        "Type": "http",
+        "Interval": "10s",
+        "Timeout": "2s"
+    }
+]
+```
+
+### Confirming the app is actually reachable through Nomad's dynamic port
+
+```
+$ curl http://172.30.192.163:29000/
+... <dd>Bahlakoana</dd> ... <dd><code>e3a7382e49e8577e01e169500598e58f0e6bf5f3</code></dd> ...
+
+$ curl http://172.30.192.163:29000/healthz
+OK
+```
 
 ## Task 6 — Log Aggregation with Grafana Loki
 
@@ -247,12 +332,34 @@ _To be completed._
    first, since `update-index --chmod` only operates on files already known
    to git's index.
 
-5. _(for next tasks once issues are there)_
+3. **`shutdown_delay` placed in the wrong HCL block.** `nomad job validate`
+   kept warning that the task "defines services, but has no shutdown_delay
+   set" even after adding it. The setting had been nested inside the
+   Docker-driver-specific `config { }` block, which Nomad passes straight
+   to the driver — the driver has no concept of `shutdown_delay` and
+   silently ignored it. Moved it to be a direct sibling of `config { }`
+   inside the `task` block, which resolved the warning.
+
+4. **Deployment marked `unhealthy` despite the container running fine.**
+   `nomad job run` produced a deployment stuck at `Unhealthy = 1` until it
+   hit its `healthy_deadline` and failed, even though `Client Status` on the
+   allocation showed `running` the whole time with zero restarts. Checking
+   `consul members` revealed the Consul agent itself wasn't running — it
+   had stopped when an earlier terminal session closed (`-dev` mode has no
+   persistent background service). With no Consul agent available, the
+   HTTP health check had nothing to run against, so the deployment could
+   never be marked healthy regardless of the app's actual state. Restarted
+   Consul, purged the failed job (`nomad job stop -purge`), and re-ran —
+   the new deployment succeeded immediately with the check reporting
+   `"Status": "passing"`.
 
 ## Known Limitations
 
-- Tasks 5 (Nomad) and 6 (Loki/Grafana) are not yet implemented as of this
-  README draft.
+- Task 6 (Loki/Grafana) is not yet implemented as of this README draft.
+- Nomad and Consul are run in `-dev` mode for local learning purposes — this
+  is explicitly not production-safe (single node, in-memory state, no
+  persistence, no ACLs/TLS). A production setup would need a proper
+  server/client cluster, persistent storage, and Consul ACLs enabled.
 - The image's "disk usage" figure (73.7MB) exceeds a strict reading of the
   60MB budget, though "content size" (21MB) — the image's actual own
   contribution — is well under it. Worth clarifying which metric the
