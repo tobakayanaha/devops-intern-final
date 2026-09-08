@@ -1,0 +1,36 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+
+    relabel_configs:
+      # Always-present label: which scrape job this came from.
+      - source_labels: [__meta_docker_container_name]
+        target_label: container
+        regex: "/(.*)"
+        replacement: "$1"
+
+      - target_label: job
+        replacement: "docker-logs"
+
+      # Nomad sets this label on every container it launches via the
+      # docker driver. Not all containers on the host will have it
+      # (e.g. unrelated manually-run containers), so this label is
+      # simply empty for those - that's expected and fine.
+      - source_labels:
+          ["__meta_docker_container_label_com_hashicorp_nomad_alloc_id"]
+        target_label: nomad_alloc_id
+
+      - source_labels: [__meta_docker_container_id]
+        target_label: container_id
