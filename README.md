@@ -308,9 +308,61 @@ OK
 
 ## Task 6 — Log Aggregation with Grafana Loki
 
-_To be completed._
+`monitoring/docker-compose.yaml` brings up Loki, Promtail, and Grafana
+together. Promtail discovers running containers via the Docker socket
+(`docker_sd_configs`) and ships their logs to Loki; Grafana queries Loki
+through its Explore UI.
 
----
+- `monitoring/loki-config.yaml` and `monitoring/promtail-config.yaml` are
+  committed configuration, not defaults pulled at runtime
+- Promtail attaches `job`, `container`, and `nomad_alloc_id` labels to every
+  log stream (see `monitoring/loki_setup.md` for exactly how each label is
+  derived)
+- Ingestion confirmed via LogQL after deliberately requesting a missing path
+  against the Nomad-deployed nginx-app container
+
+### Starting the stack
+
+```bash
+cd monitoring
+docker compose up
+```
+
+### Confirming ingestion
+
+```bash
+curl http://172.30.192.163:24338/
+curl http://172.30.192.163:24338/this-path-does-not-exist
+```
+
+LogQL query, run in Grafana Explore:
+
+```logql
+{container=~"nginx-app.+"}
+```
+
+Result — 3 real log lines, correctly labelled:
+
+container=nginx-app-0cc64c19-43f4-bcb3-c883-ed422e71355e
+container_id=662cdd25317a...
+job=docker-logs
+nomad_alloc_id=0cc64c19-43f4-bcb3-c883-ed422e71355e
+
+2026-09-08 08:32:14 172.30.192.163 - - "GET / HTTP/1.1" 200 1066
+2026-09-08 08:33:12 172.30.192.163 - - "GET /this-path-does-not-exist HTTP/1.1" 404 153
+2026-09-08 08:33:12 ERROR open() "/usr/share/nginx/html/this-path-does-not-exist" failed (2: No such file or directory)
+
+
+Isolating the non-200 response specifically:
+
+```logql
+{container=~"nginx-app.+"} |= "404"
+```
+
+![Grafana Explore showing labelled nginx-app logs, including a 404 and a 200 response](docs/screenshots/grafana-explore-loki.png)
+
+Full setup notes, label derivation, and troubleshooting are documented in
+[`monitoring/loki_setup.md`](monitoring/loki_setup.md).
 
 ## Troubleshooting
 
