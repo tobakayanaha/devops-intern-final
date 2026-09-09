@@ -3,7 +3,7 @@
 **Name:** Bahlakoana
 **Submission date:** 2026-09-12
 
-[![CI](https://github.com/tobakayaha/devops-intern-final/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tobakayanaha/devops-intern-final/actions/workflows/ci.yml)
+[![CI](https://github.com/tobakayanaha/devops-intern-final/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tobakayanaha/devops-intern-final/actions/workflows/ci.yml)
 
 ## Architecture Overview
 
@@ -45,6 +45,9 @@ to Loki and queried via Grafana.
 | Consul     | v2.0.3                        |
 | ShellCheck | 0.9.0                         |
 | Git        | 2.43.0                        |
+| Loki       | 3.7.0                         |
+| Promtail   | 3.6.8                         |
+| Grafana    | 13.0.2                        |
 
 ## Quick Start
 
@@ -69,7 +72,7 @@ docker rm -f nginx-app
   opened and self-reviewed by the author (inline review comments left on
   `app/nginx.conf` and `app/Dockerfile` before merging).
 - Conventional commit messages used throughout (`feat:`, `ci:`, `docs:`).
-- Final state tagged `v1.0.0` _(to be tagged once all tasks are complete)_.
+- Final state tagged `v1.0.0`.
 
 ## Task 2 — Linux Scripting
 
@@ -215,7 +218,7 @@ Workflow: `.github/workflows/ci.yml`, triggered on push and PR to `main`.
 - `GITHUB_TOKEN` permissions are least-privilege: `contents: read` at the
   workflow level, with `packages: write` scoped only to the `publish` job.
 - All four jobs pass on `main`, including `publish` — image is live at
-  `ghcr.io/tonosa/devops-intern-final`.
+  `ghcr.io/tobakayanaha/devops-intern-final`.
 
 ## Task 5 — Orchestration with Nomad
 
@@ -336,8 +339,8 @@ docker compose up
 ### Confirming ingestion
 
 ```bash
-curl http://172.30.192.163:24338/
-curl http://172.30.192.163:24338/this-path-does-not-exist
+curl http://127.0.0.1:21032/
+curl http://127.0.0.1:21032/this-path-does-not-exist
 ```
 
 LogQL query, run in Grafana Explore:
@@ -415,7 +418,6 @@ Full setup notes, label derivation, and troubleshooting are documented in
 
 ## Known Limitations
 
-- Task 6 (Loki/Grafana) is not yet implemented as of this README draft.
 - Nomad and Consul are run in `-dev` mode for local learning purposes — this
   is explicitly not production-safe (single node, in-memory state, no
   persistence, no ACLs/TLS). A production setup would need a proper
@@ -440,4 +442,4 @@ Full setup notes, label derivation, and troubleshooting are documented in
 ## Screenshots
 
 Screenshots referenced inline throughout the relevant task sections above,
-stored under `docs/screenshots/`. _(to be added as captured)_
+stored under `docs/screenshots/`. 
