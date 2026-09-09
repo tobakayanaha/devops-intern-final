@@ -1,9 +1,9 @@
 # DevOps Intern Final Assessment
 
 **Name:** Bahlakoana
-**Submission date:** 2026-09-02
+**Submission date:** 2026-09-12
 
-[![CI](https://github.com/tobakayanaha/devops-intern-final/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tobakayanaha/devops-intern-final/actions/workflows/ci.yml)
+[![CI](https://github.com/tobakayaha/devops-intern-final/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tobakayanaha/devops-intern-final/actions/workflows/ci.yml)
 
 ## Architecture Overview
 
@@ -41,8 +41,8 @@ to Loki and queried via Grafana.
 | Tool       | Version used in this project |
 |------------|-------------------------------|
 | Docker     | 29.7.0 (build c1eba93)        |
-| Nomad      | v2.0.5     |
-| Consul     | v2.0.3     |
+| Nomad      | v2.0.5                        |
+| Consul     | v2.0.3                        |
 | ShellCheck | 0.9.0                         |
 | Git        | 2.43.0                        |
 
@@ -277,7 +277,7 @@ Latest Deployment
   nginx-app   true         1        1       1        0
 Allocations
 ID        Node ID   Task Group  Version  Desired  Status   Created  Modified
-391e3e75  b32d7210  nginx-app   0        run      running  43s ago  24s ago
+15ada5aa  8c47e9b1  nginx-app   0        run      running  23s ago  1s ago
 ```
 
 ### Consul health check — passing
@@ -287,7 +287,7 @@ $ curl -s http://localhost:8500/v1/health/checks/nginx-app | python3 -m json.too
 [
     {
         "Status": "passing",
-        "Output": "HTTP GET http://172.30.192.163:29000/healthz: 200 OK Output: OK\n",
+        "Output": "HTTP GET http://127.0.0.1:21032/healthz: 200 OK Output: OK\n",
         "ServiceName": "nginx-app",
         "Type": "http",
         "Interval": "10s",
@@ -299,12 +299,17 @@ $ curl -s http://localhost:8500/v1/health/checks/nginx-app | python3 -m json.too
 ### Confirming the app is actually reachable through Nomad's dynamic port
 
 ```
-$ curl http://172.30.192.163:29000/
-... <dd>Bahlakoana</dd> ... <dd><code>e3a7382e49e8577e01e169500598e58f0e6bf5f3</code></dd> ...
+$ curl http://127.0.0.1:21032/
+... <dd>Bahlakoana</dd> ... <dd><code>e9822feccd24853f55dd058296735079b26d8f0c</code></dd> ...
 
-$ curl http://172.30.192.163:29000/healthz
+$ curl http://127.0.0.1:21032/healthz
 OK
 ```
+
+> **Note:** The Nomad node ID, allocation ID, and dynamic port shown above
+> changed from earlier evidence in this README because the local Nomad and
+> Consul agents (run in `-dev` mode) were restarted partway through this
+> project — see Known Limitations.
 
 ## Task 6 — Log Aggregation with Grafana Loki
 
@@ -343,15 +348,16 @@ LogQL query, run in Grafana Explore:
 
 Result — 3 real log lines, correctly labelled:
 
+```
 container=nginx-app-0cc64c19-43f4-bcb3-c883-ed422e71355e
 container_id=662cdd25317a...
 job=docker-logs
 nomad_alloc_id=0cc64c19-43f4-bcb3-c883-ed422e71355e
 
-2026-09-08 08:32:14 172.30.192.163 - - "GET / HTTP/1.1" 200 1066
-2026-09-08 08:33:12 172.30.192.163 - - "GET /this-path-does-not-exist HTTP/1.1" 404 153
-2026-09-08 08:33:12 ERROR open() "/usr/share/nginx/html/this-path-does-not-exist" failed (2: No such file or directory)
-
+2026-09-08 08:32:14  172.30.192.163 - - "GET / HTTP/1.1" 200 1066
+2026-09-08 08:33:12  172.30.192.163 - - "GET /this-path-does-not-exist HTTP/1.1" 404 153
+2026-09-08 08:33:12  ERROR  open() "/usr/share/nginx/html/this-path-does-not-exist" failed (2: No such file or directory)
+```
 
 Isolating the non-200 response specifically:
 
@@ -363,6 +369,8 @@ Isolating the non-200 response specifically:
 
 Full setup notes, label derivation, and troubleshooting are documented in
 [`monitoring/loki_setup.md`](monitoring/loki_setup.md).
+
+---
 
 ## Troubleshooting
 
@@ -412,6 +420,13 @@ Full setup notes, label derivation, and troubleshooting are documented in
   is explicitly not production-safe (single node, in-memory state, no
   persistence, no ACLs/TLS). A production setup would need a proper
   server/client cluster, persistent storage, and Consul ACLs enabled.
+- Because `-dev` mode keeps all state in memory, the Nomad agent, Consul
+  agent, or both stopped more than once during this project (e.g. a closed
+  terminal session) and had to be restarted. Each restart wipes prior
+  job/allocation history, requiring a fresh `nomad job run`. This happened
+  at least twice and is reflected in mismatched allocation IDs/ports
+  between different pieces of evidence in this README — the underlying app
+  and job spec were unaffected each time.
 - The image's "disk usage" figure (73.7MB) exceeds a strict reading of the
   60MB budget, though "content size" (21MB) — the image's actual own
   contribution — is well under it. Worth clarifying which metric the
